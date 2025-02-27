@@ -29,6 +29,7 @@ import type {
   EdgeNode,
 } from "@/types";
 import { PRODUCT_DETAIL_QUERY, UPDATE_PRODUCT_MUTATION } from "@/graphql";
+import { toast } from "sonner";
 
 // Product detail component
 function ProductDetail({ productId }: { productId: string }) {
@@ -45,7 +46,6 @@ function ProductDetail({ productId }: { productId: string }) {
   const [vendor, setVendor] = useState("");
   const [productType, setProductType] = useState("");
   const [tags, setTags] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   // Initialize form state from fetched data
   useEffect(() => {
@@ -67,7 +67,7 @@ function ProductDetail({ productId }: { productId: string }) {
           input: {
             id: productId,
             title,
-            description,
+            descriptionHtml: description,
             vendor,
             productType,
             tags: tags.split(",").map((tag) => tag.trim()),
@@ -77,12 +77,30 @@ function ProductDetail({ productId }: { productId: string }) {
 
       if (result.data?.productUpdate?.userErrors?.length > 0) {
         console.error("Update errors:", result.data.productUpdate.userErrors);
+        toast.error("Failed to update product", {
+          description: result.data.productUpdate.userErrors
+            .map((err: { message: string }) => err.message)
+            .join(", "),
+        });
       } else {
-        setSuccessMessage("Product updated successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
+        toast.success("Product updated", {
+          description: `"${title}" has been successfully updated.`,
+        });
       }
     } catch (error) {
       console.error("Failed to update product:", error);
+      toast.error("Error updating product", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    }
+  };
+
+  // Add this function before handleSubmit
+  const confirmSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (window.confirm("Are you sure you want to update this product?")) {
+      handleSubmit(e);
     }
   };
 
@@ -104,31 +122,29 @@ function ProductDetail({ productId }: { productId: string }) {
         </Link>
       </div>
 
-      {successMessage && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-          {successMessage}
-        </div>
-      )}
+      {updateError &&
+        toast.error("Error updating product", {
+          description: updateError.message,
+        })}
 
-      {updateError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          Error updating product: {updateError.message}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={confirmSubmit}>
         <Grid numItemsMd={2} className="gap-6 mb-6">
           <Card>
             <Title className="mb-4">Basic Information</Title>
             <div className="space-y-4">
               <div>
-                <Text className="mb-2">Product Title</Text>
+                <Text className="mb-2 font-semibold">Product Title</Text>
                 <TextInput
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Product name"
                   required
+                  className="border-2 focus:border-blue-500"
+                  error={title.trim() === ""}
                 />
+                <Text className="mt-1 text-xs text-gray-500">
+                  The name displayed to customers in your store
+                </Text>
               </div>
 
               <div>
@@ -155,6 +171,7 @@ function ProductDetail({ productId }: { productId: string }) {
                     src={node.url}
                     alt={node.altText || "Product image"}
                     fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     className="object-cover"
                   />
                 </div>
@@ -242,8 +259,15 @@ function ProductDetail({ productId }: { productId: string }) {
           </Text>
         </Card>
 
-        <div className="flex justify-end">
-          <Button type="submit" icon={Save} loading={updating} color="indigo">
+        {/* Keep the original button too */}
+        <div className="flex justify-end mt-6">
+          <Button
+            type="submit"
+            icon={Save}
+            loading={updating}
+            color="indigo"
+            className="fixed bottom-6 right-6 z-10 text-white bg-blue-500 hover:bg-blue-600"
+          >
             Save Changes
           </Button>
         </div>
