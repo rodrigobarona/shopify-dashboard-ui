@@ -1,6 +1,6 @@
 import { Session } from "@shopify/shopify-api";
 import { Redis } from "@upstash/redis";
-
+import type { SessionParams } from "@/types";
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL || "",
   token: process.env.UPSTASH_REDIS_REST_TOKEN || "",
@@ -33,11 +33,11 @@ export const sessionStorage = {
       console.log(`Session loaded successfully for ID: ${id}`);
 
       // Handle different potential response formats
-      let sessionObj;
+      let sessionObj: SessionParams;
       if (typeof sessionData === "string") {
-        sessionObj = JSON.parse(sessionData);
+        sessionObj = JSON.parse(sessionData) as SessionParams;
       } else if (typeof sessionData === "object") {
-        sessionObj = sessionData;
+        sessionObj = sessionData as SessionParams;
       } else {
         throw new Error(`Unexpected session data type: ${typeof sessionData}`);
       }

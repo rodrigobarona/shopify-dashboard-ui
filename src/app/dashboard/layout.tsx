@@ -2,10 +2,7 @@
 
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { getSessionId } from "@/lib/shopify";
-import { sessionStorage } from "@/lib/session";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function DashboardLayout({
   children,
@@ -13,35 +10,14 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [shopName, setShopName] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    async function loadSession() {
-      const shopCookie = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
-      if (!shopCookie) {
-        router.push("/login");
-        return;
-      }
-
+    // Just get the shop name for the sidebar
+    const shopCookie = document.cookie.match(/shopify_shop=([^;]+)/)?.[1];
+    if (shopCookie) {
       setShopName(shopCookie.split(".")[0]);
-
-      // Get session
-      const sessionId = getSessionId(shopCookie);
-      const session = await sessionStorage.loadSession(sessionId);
-
-      if (!session) {
-        router.push(`/login?shop=${shopCookie}`);
-        return;
-      }
-
-      setIsLoading(false);
     }
-
-    loadSession();
-  }, [router]);
-
-  if (isLoading) return <div>Loading...</div>;
+  }, []);
 
   return (
     <SidebarProvider>

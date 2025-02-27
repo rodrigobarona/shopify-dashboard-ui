@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import DashboardClient from "./client";
+import ProductsClient from "./client";
 import type { SessionParams } from "@/types";
 
-export default function DashboardPage() {
+export default function ProductsPage() {
   const [session, setSession] = useState<SessionParams | null>(null);
   const [shop, setShop] = useState("");
   const [loading, setLoading] = useState(true);
@@ -37,7 +37,7 @@ export default function DashboardPage() {
           router.replace("/login");
         }
       } catch (error) {
-        console.error("Error loading dashboard:", error);
+        console.error("Error loading products:", error);
         router.replace("/login");
       }
     }
@@ -49,16 +49,16 @@ export default function DashboardPage() {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Loading dashboard...</h2>
-          <p>Preparing your Shopify data...</p>
+          <h2 className="text-xl font-semibold mb-2">Loading products...</h2>
+          <p>Preparing your Shopify product data...</p>
         </div>
       </div>
     );
   }
 
-  // Render the dashboard client with the session data
+  // Render the products client with the session data
   return session ? (
-    <DashboardClient session={session} shop={shop} />
+    <ProductsClient session={session} shop={shop} />
   ) : (
     <div>Session data unavailable</div>
   );

@@ -1,30 +1,38 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getSessionId } from "@/lib/shopify";
 import { sessionStorage } from "@/lib/session";
+import { cookies } from "next/headers";
 
-export async function GET(request: NextRequest) {
+export const runtime = "nodejs";
+
+export async function GET() {
   try {
-    const shop = request.cookies.get("shopify_shop")?.value;
+    const cookieStore = await cookies();
+    const shopCookie = cookieStore.get("shopify_shop")?.value;
 
-    if (!shop) {
+    if (!shopCookie) {
       return NextResponse.json(
-        { error: "No shop found in cookies" },
+        { error: "No shop cookie found" },
         { status: 401 }
       );
     }
 
-    const sessionId = getSessionId(shop);
+    const sessionId = getSessionId(shopCookie);
     const session = await sessionStorage.loadSession(sessionId);
 
-    if (!session) {
-      return NextResponse.json({ error: "No session found" }, { status: 401 });
+    if (!session || !session.accessToken) {
+      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
     }
 
-    return NextResponse.json(session.toObject());
+    // Return the session data securely
+    return NextResponse.json({
+      shop: shopCookie,
+      session: session.toObject(),
+    });
   } catch (error) {
-    console.error("Session fetch error:", error);
+    console.error("Error fetching session:", error);
     return NextResponse.json(
-      { error: "Failed to fetch session" },
+      { error: "Failed to load session" },
       { status: 500 }
     );
   }
