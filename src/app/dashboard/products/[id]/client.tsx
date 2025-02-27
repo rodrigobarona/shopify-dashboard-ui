@@ -28,11 +28,11 @@ import type {
   ShopifyVariant,
   EdgeNode,
 } from "@/types";
-import { PRODUCTS_LIST_QUERY, UPDATE_PRODUCT_MUTATION } from "@/graphql";
+import { PRODUCT_DETAIL_QUERY, UPDATE_PRODUCT_MUTATION } from "@/graphql";
 
 // Product detail component
 function ProductDetail({ productId }: { productId: string }) {
-  const { loading, error, data } = useQuery(PRODUCTS_LIST_QUERY, {
+  const { loading, error, data } = useQuery(PRODUCT_DETAIL_QUERY, {
     variables: { id: productId },
   });
 
