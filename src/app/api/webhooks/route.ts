@@ -33,3 +33,6 @@ export const config = {
     bodyParser: false,
   },
 };
+
+// Specify Node.js runtime
+export const runtime = "nodejs";

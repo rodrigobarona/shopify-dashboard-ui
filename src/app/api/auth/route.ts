@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { shopify } from "@/lib/shopify";
+import crypto from "node:crypto";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,18 +20,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Direct path without host (simpler approach)
-    const callbackPath = "/api/auth/callback";
+    // Build redirect URL directly instead of using auth.begin
+    const reqHost = request.headers.get("host") || "localhost:3000";
+    const protocol = reqHost.includes("localhost") ? "http" : "https";
+    const redirectUri = `${protocol}://${reqHost}/api/auth/callback`;
 
-    // Use simpler parameters aligned with Shopify API expectations
-    const authUrl = await shopify.auth.begin({
-      shop: sanitizedShop,
-      callbackPath,
-      isOnline: true,
-      rawRequest: request,
+    // Manually construct the authorization URL
+    const nonce = crypto.randomBytes(16).toString("hex");
+    const authUrl = `https://${sanitizedShop}/admin/oauth/authorize?client_id=${
+      process.env.SHOPIFY_API_KEY
+    }&scope=${process.env.SCOPES}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&state=${nonce}`;
+
+    // Store the nonce in session cookie for verification
+    const response = NextResponse.redirect(authUrl);
+    response.cookies.set("shopify_nonce", nonce, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
     });
 
-    return NextResponse.redirect(authUrl);
+    return response;
   } catch (error) {
     console.error("Auth error details:", error);
 
@@ -43,3 +53,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Specify Node.js runtime
+export const runtime = "nodejs";

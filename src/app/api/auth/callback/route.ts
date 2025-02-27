@@ -2,54 +2,84 @@ import { type NextRequest, NextResponse } from "next/server";
 import { shopify } from "@/lib/shopify";
 import { sessionStorage } from "@/lib/session";
 
+export const runtime = "nodejs";
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const shop = searchParams.get("shop");
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
-    if (!shop) {
+    if (!shop || !code) {
       return NextResponse.json(
-        { error: "Missing shop parameter" },
+        { error: "Missing required parameters" },
         { status: 400 }
       );
     }
 
-    // Complete OAuth process
-    const callback = await shopify.auth.callback({
-      rawRequest: request,
-      rawResponse: new Response(),
-    });
+    // Verify the state matches what we stored in cookie
+    const storedNonce = request.cookies.get("shopify_nonce")?.value;
+    if (!storedNonce || storedNonce !== state) {
+      return NextResponse.json(
+        { error: "State verification failed" },
+        { status: 403 }
+      );
+    }
 
-    const { session } = callback;
+    // Manually exchange the code for an access token
+    const accessTokenResponse = await fetch(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_id: process.env.SHOPIFY_API_KEY,
+          client_secret: process.env.SHOPIFY_API_SECRET_KEY,
+          code,
+        }),
+      }
+    );
+
+    const { access_token, scope } = await accessTokenResponse.json();
+
+    if (!access_token) {
+      throw new Error("Failed to get access token");
+    }
+
+    // Create a session with properly formatted shop
+    const formattedShop = shop.includes(".myshopify.com")
+      ? shop
+      : `${shop}.myshopify.com`;
+    const session = shopify.session.customAppSession(formattedShop);
+
+    // Set the access token and scope
+    session.accessToken = access_token;
+    session.scope = scope || process.env.SCOPES;
+
+    // Log what ID Shopify actually created
+    console.log(`Default session ID: ${session.id}`);
 
     // Store session
     await sessionStorage.storeSession(session);
+    console.log(`Session stored with ID: ${session.id}, Shop: ${shop}`);
 
     // Create response with cookie
-    const response = NextResponse.redirect(new URL("/", request.url));
+    const response = NextResponse.redirect(new URL("/dashboard", request.url));
     response.cookies.set("shopify_shop", shop, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
     });
+    console.log(`Set shopify_shop cookie to: ${shop}`);
 
-    // Register webhooks using bulk registration
+    // Register webhooks
     try {
-      const webhookRegistrations = await shopify.webhooks.register({
+      await shopify.webhooks.register({
         session,
       });
-
-      // Log results for each webhook registration
-      for (const [topic, results] of Object.entries(webhookRegistrations)) {
-        if (Array.isArray(results) && results.length > 0) {
-          // Handle array of results
-          for (const result of results) {
-            console.log(`Webhook registration for ${topic}:`, result);
-          }
-        } else {
-          console.log(`No registration results for ${topic}`);
-        }
-      }
 
       console.log("Webhook registrations completed");
     } catch (error) {
