@@ -3,6 +3,8 @@ import { getSessionId } from "@/lib/shopify";
 import { sessionStorage } from "@/lib/session";
 import { LATEST_API_VERSION } from "@shopify/shopify-api";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const shop = request.cookies.get("shopify_shop")?.value;
@@ -22,6 +24,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+
+    // Log the request for debugging
+    console.log(`Forwarding GraphQL request to ${shop}`);
 
     // Forward the request to Shopify GraphQL API
     const headers = new Headers();

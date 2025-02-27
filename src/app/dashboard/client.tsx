@@ -23,6 +23,36 @@ const SHOP_QUERY = gql`
   }
 `;
 
+// In dashboard/client.tsx, add a new GraphQL query for products
+const PRODUCTS_QUERY = gql`
+  query GetProducts {
+    products(first: 10) {
+      edges {
+        node {
+          id
+          title
+          handle
+          description
+          priceRangeV2 {
+            minVariantPrice {
+              amount
+              currencyCode
+            }
+          }
+          images(first: 1) {
+            edges {
+              node {
+                url
+                altText
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 // Shop info component
 function ShopInfo() {
   const { loading, error, data } = useQuery(SHOP_QUERY);
@@ -44,6 +74,55 @@ function ShopInfo() {
       <p>
         <strong>Email:</strong> {shop.email}
       </p>
+    </div>
+  );
+}
+
+// Add a new Products component
+function ProductsList() {
+  const { loading, error, data } = useQuery(PRODUCTS_QUERY);
+
+  if (loading) return <p>Loading products...</p>;
+  if (error) return <p>Error loading products: {error.message}</p>;
+
+  const products = data.products.edges;
+
+  if (products.length === 0) {
+    return <p>No products found in this store.</p>;
+  }
+
+  return (
+    <div className="mt-6">
+      <h2 className="text-2xl font-bold mb-4">Products</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {products.map(({ node }) => (
+          <div
+            key={node.id}
+            className="border rounded-lg overflow-hidden bg-white shadow-md"
+          >
+            {node.images.edges.length > 0 && (
+              <img
+                src={node.images.edges[0].node.url}
+                alt={node.images.edges[0].node.altText || node.title}
+                className="w-full h-48 object-cover"
+              />
+            )}
+            <div className="p-4">
+              <h3 className="font-bold text-lg">{node.title}</h3>
+              <p className="text-gray-700 mt-1">
+                {node.priceRangeV2.minVariantPrice.amount}{" "}
+                {node.priceRangeV2.minVariantPrice.currencyCode}
+              </p>
+              {node.description && (
+                <p className="text-gray-600 mt-2 text-sm truncate">
+                  {node.description.substring(0, 100)}
+                  {node.description.length > 100 ? "..." : ""}
+                </p>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -83,6 +162,7 @@ export default function DashboardClient({
         <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
         <p className="mb-4">Connected to {shop}</p>
         <ShopInfo />
+        <ProductsList />
       </div>
     </ApolloProvider>
   );

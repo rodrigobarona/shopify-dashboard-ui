@@ -31,7 +31,17 @@ export const sessionStorage = {
       }
 
       console.log(`Session loaded successfully for ID: ${id}`);
-      const sessionObj = JSON.parse(String(sessionData));
+
+      // Handle different potential response formats
+      let sessionObj;
+      if (typeof sessionData === "string") {
+        sessionObj = JSON.parse(sessionData);
+      } else if (typeof sessionData === "object") {
+        sessionObj = sessionData;
+      } else {
+        throw new Error(`Unexpected session data type: ${typeof sessionData}`);
+      }
+
       return new Session(sessionObj);
     } catch (error) {
       console.error("Session loading error:", error);
