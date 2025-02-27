@@ -66,11 +66,11 @@ The app includes a robust webhook handling system:
 
 ```mermaid
 flowchart LR
-Shopify[Shopify] -->|Send webhook| WebhookEndpoint[/api/webhooks]
-WebhookEndpoint -->|Validate| Processor[Webhook Processor]
-Processor -->|Route to handler| HandlerRegistry[Handler Registry]
-HandlerRegistry -->|Execute| ProductHandlers[Product Handlers]
-HandlerRegistry -->|Execute| OrderHandlers[Order Handlers]
+Shopify[Shopify] -->|Send webhook| WebhookEndpoint["/api/webhooks"]
+WebhookEndpoint -->|Validate| Processor["Webhook Processor"]
+Processor -->|Route to handler| HandlerRegistry["Handler Registry"]
+HandlerRegistry -->|Execute| ProductHandlers["Product Handlers"]
+HandlerRegistry -->|Execute| OrderHandlers["Order Handlers"]
 ```
 
 Webhooks are processed through a registry pattern, allowing modular and testable handler implementation for different Shopify events.
