@@ -10,20 +10,82 @@ import {
 } from "@apollo/client";
 import { createApolloClient } from "@/lib/apollo";
 import { Session } from "@shopify/shopify-api";
+import {
+  Card,
+  Title,
+  Text,
+  Tab,
+  TabList,
+  TabGroup,
+  TabPanel,
+  TabPanels,
+  Metric,
+  AreaChart,
+  type Color,
+  Grid,
+  Badge,
+  BarChart,
+} from "@tremor/react";
+import { ShoppingBag, ShoppingCart, Users, TrendingUp } from "lucide-react";
+import Image from "next/image";
 
-// Example GraphQL query
-const SHOP_QUERY = gql`
-  query {
+// Add this interface near the top of your file, under the imports
+interface ProductNode {
+  id: string;
+  title: string;
+  handle: string;
+  description?: string;
+  priceRangeV2: {
+    minVariantPrice: {
+      amount: string;
+      currencyCode: string;
+    };
+  };
+  images: {
+    edges: Array<{
+      node: {
+        url: string;
+        altText: string | null;
+      };
+    }>;
+  };
+}
+
+// Summary statistics query
+const STATS_QUERY = gql`
+  query GetShopStats {
     shop {
       name
-      id
-      email
       myshopifyDomain
+    }
+    products(first: 1) {
+      edges {
+        cursor
+      }
+      pageInfo {
+        totalCount
+      }
+    }
+    orders(first: 1) {
+      edges {
+        cursor
+      }
+      pageInfo {
+        totalCount
+      }
+    }
+    customers(first: 1) {
+      edges {
+        cursor
+      }
+      pageInfo {
+        totalCount
+      }
     }
   }
 `;
 
-// In dashboard/client.tsx, add a new GraphQL query for products
+// Products query
 const PRODUCTS_QUERY = gql`
   query GetProducts {
     products(first: 10) {
@@ -53,32 +115,105 @@ const PRODUCTS_QUERY = gql`
   }
 `;
 
-// Shop info component
-function ShopInfo() {
-  const { loading, error, data } = useQuery(SHOP_QUERY);
+// Example sales data (replace with real data)
+const salesData = [
+  {
+    date: "Jan 22",
+    Sales: 2890,
+    Orders: 35,
+  },
+  {
+    date: "Feb 22",
+    Sales: 1890,
+    Orders: 25,
+  },
+  {
+    date: "Mar 22",
+    Sales: 3890,
+    Orders: 55,
+  },
+  {
+    date: "Apr 22",
+    Sales: 4290,
+    Orders: 85,
+  },
+  {
+    date: "May 22",
+    Sales: 3490,
+    Orders: 54,
+  },
+  {
+    date: "Jun 22",
+    Sales: 6790,
+    Orders: 120,
+  },
+];
 
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error: {error.message}</p>;
+// Stats Cards Component
+function StatsCards() {
+  const { loading, error, data } = useQuery(STATS_QUERY);
 
-  const { shop } = data;
+  if (loading) return <p>Loading stats...</p>;
+  if (error) return <p>Error loading stats: {error.message}</p>;
+
+  const { products, orders, customers } = data;
 
   return (
-    <div className="p-6 bg-white rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold mb-4">Shop Details</h2>
-      <p>
-        <strong>Name:</strong> {shop.name}
-      </p>
-      <p>
-        <strong>Domain:</strong> {shop.myshopifyDomain}
-      </p>
-      <p>
-        <strong>Email:</strong> {shop.email}
-      </p>
-    </div>
+    <Grid numItemsMd={2} numItemsLg={4} className="gap-6 mt-6">
+      <StatsCard
+        title="Total Products"
+        value={products.pageInfo.totalCount}
+        icon={<ShoppingBag className="h-8 w-8" />}
+        color="indigo"
+      />
+      <StatsCard
+        title="Total Orders"
+        value={orders.pageInfo.totalCount}
+        icon={<ShoppingCart className="h-8 w-8" />}
+        color="amber"
+      />
+      <StatsCard
+        title="Total Customers"
+        value={customers.pageInfo.totalCount}
+        icon={<Users className="h-8 w-8" />}
+        color="emerald"
+      />
+      <StatsCard
+        title="Revenue"
+        value="$43,350"
+        icon={<TrendingUp className="h-8 w-8" />}
+        color="rose"
+      />
+    </Grid>
   );
 }
 
-// Add a new Products component
+// Single Stats Card
+function StatsCard({
+  title,
+  value,
+  icon,
+  color,
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: Color;
+}) {
+  return (
+    <Card decoration="top" decorationColor={color}>
+      <div className="flex items-center justify-between">
+        <div>
+          <Text>{title}</Text>
+          <Metric>{value}</Metric>
+        </div>
+        <div className={`bg-${color}-100 p-3 rounded-full`}>{icon}</div>
+      </div>
+    </Card>
+  );
+}
+
+// Products List Component
 function ProductsList() {
   const { loading, error, data } = useQuery(PRODUCTS_QUERY);
 
@@ -93,37 +228,66 @@ function ProductsList() {
 
   return (
     <div className="mt-6">
-      <h2 className="text-2xl font-bold mb-4">Products</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {products.map(({ node }) => (
-          <div
-            key={node.id}
-            className="border rounded-lg overflow-hidden bg-white shadow-md"
-          >
-            {node.images.edges.length > 0 && (
-              <img
-                src={node.images.edges[0].node.url}
-                alt={node.images.edges[0].node.altText || node.title}
-                className="w-full h-48 object-cover"
-              />
-            )}
-            <div className="p-4">
-              <h3 className="font-bold text-lg">{node.title}</h3>
-              <p className="text-gray-700 mt-1">
-                {node.priceRangeV2.minVariantPrice.amount}{" "}
-                {node.priceRangeV2.minVariantPrice.currencyCode}
-              </p>
-              {node.description && (
-                <p className="text-gray-600 mt-2 text-sm truncate">
-                  {node.description.substring(0, 100)}
-                  {node.description.length > 100 ? "..." : ""}
-                </p>
+      <Card>
+        <Title>Latest Products</Title>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          {products.map(({ node }: { node: ProductNode }) => (
+            <Card key={node.id} className="flex flex-col">
+              {node.images.edges.length > 0 && (
+                <Image
+                  src={node.images.edges[0].node.url}
+                  alt={node.images.edges[0].node.altText || node.title}
+                  className="w-full h-48 object-cover rounded-t-lg"
+                  width={1920}
+                  height={1080}
+                />
               )}
-            </div>
-          </div>
-        ))}
-      </div>
+              <div className="p-3 flex-grow">
+                <div className="flex justify-between items-start">
+                  <Title className="text-lg truncate">{node.title}</Title>
+                  <Badge color="indigo">
+                    {node.priceRangeV2.minVariantPrice.amount}{" "}
+                    {node.priceRangeV2.minVariantPrice.currencyCode}
+                  </Badge>
+                </div>
+                {node.description && (
+                  <Text className="mt-2 line-clamp-2">{node.description}</Text>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </Card>
     </div>
+  );
+}
+
+// Sales Charts Component
+function SalesCharts() {
+  return (
+    <Grid numItemsMd={1} numItemsLg={2} className="gap-6 mt-6">
+      <Card>
+        <Title>Sales Overview</Title>
+        <AreaChart
+          className="mt-4 h-72"
+          data={salesData}
+          index="date"
+          categories={["Sales"]}
+          colors={["indigo"]}
+          valueFormatter={(number) => `$${number.toLocaleString()}`}
+        />
+      </Card>
+      <Card>
+        <Title>Orders</Title>
+        <BarChart
+          className="mt-4 h-72"
+          data={salesData}
+          index="date"
+          categories={["Orders"]}
+          colors={["amber"]}
+        />
+      </Card>
+    </Grid>
   );
 }
 
@@ -145,9 +309,9 @@ export default function DashboardClient({
       shop: session.shop,
       state: session.state,
       isOnline: session.isOnline,
-      accessToken: session.accessToken,
-      scope: session.scope,
     });
+    shopifySession.accessToken = session.accessToken;
+    shopifySession.scope = session.scope;
 
     // Create Apollo client
     const apolloClient = createApolloClient(shopifySession);
@@ -158,11 +322,39 @@ export default function DashboardClient({
 
   return (
     <ApolloProvider client={client}>
-      <div className="container mx-auto p-6">
-        <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
-        <p className="mb-4">Connected to {shop}</p>
-        <ShopInfo />
-        <ProductsList />
+      <div>
+        <Title className="text-2xl font-bold">Dashboard</Title>
+        <Text>Connected to {shop}</Text>
+
+        <TabGroup className="mt-6">
+          <TabList>
+            <Tab>Overview</Tab>
+            <Tab>Products</Tab>
+            <Tab>Orders</Tab>
+            <Tab>Customers</Tab>
+          </TabList>
+          <TabPanels>
+            <TabPanel>
+              <StatsCards />
+              <SalesCharts />
+            </TabPanel>
+            <TabPanel>
+              <ProductsList />
+            </TabPanel>
+            <TabPanel>
+              <Card className="mt-6">
+                <Title>Orders</Title>
+                <Text>Orders data will be displayed here</Text>
+              </Card>
+            </TabPanel>
+            <TabPanel>
+              <Card className="mt-6">
+                <Title>Customers</Title>
+                <Text>Customer data will be displayed here</Text>
+              </Card>
+            </TabPanel>
+          </TabPanels>
+        </TabGroup>
       </div>
     </ApolloProvider>
   );
