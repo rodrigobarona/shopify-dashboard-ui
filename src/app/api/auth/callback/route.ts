@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { shopify } from "@/lib/shopify";
 import { sessionStorage } from "@/lib/session";
+import { Session } from "@shopify/shopify-api";
 
 export const runtime = "nodejs";
 
@@ -49,21 +50,23 @@ export async function GET(request: NextRequest) {
       throw new Error("Failed to get access token");
     }
 
-    // Create a session with properly formatted shop
-    const formattedShop = shop.includes(".myshopify.com")
-      ? shop
-      : `${shop}.myshopify.com`;
-    const session = shopify.session.customAppSession(formattedShop);
+    // Create a session using the Shopify API constructor
+    const sessionId = `shop_${shop.replace(/[.]/g, "_")}`;
+    const session = new Session({
+      id: sessionId,
+      shop,
+      state,
+      isOnline: false,
+    });
 
-    // Set the access token and scope
+    // Set access token and scope
     session.accessToken = access_token;
     session.scope = scope || process.env.SCOPES;
 
-    // Log what ID Shopify actually created
-    console.log(`Default session ID: ${session.id}`);
+    console.log(`Created session with ID: ${sessionId}`);
 
     // Store session
-    await sessionStorage.storeSession(session);
+    await sessionStorage.storeSession(session as Session);
     console.log(`Session stored with ID: ${session.id}, Shop: ${shop}`);
 
     // Create response with cookie

@@ -34,6 +34,5 @@ export const shopify = shopifyApi({
 
 // Helper function to get session ID
 export function getSessionId(shop: string): string {
-  const formattedShop = shop.includes(".myshopify.com") ? shop : `${shop}.myshopify.com`;
-  return formattedShop;
+  return `shop_${shop.replace(/[.]/g, "_")}`;
 }

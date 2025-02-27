@@ -1,4 +1,4 @@
-import type { Session } from "@shopify/shopify-api";
+import { Session } from "@shopify/shopify-api";
 import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
@@ -10,7 +10,8 @@ export const sessionStorage = {
   storeSession: async (session: Session) => {
     try {
       console.log(`Storing session for shop: ${session.shop}`);
-      await redis.set(session.id, JSON.stringify(session), { ex: 86400 * 30 });
+      const sessionData = JSON.stringify(session.toObject());
+      await redis.set(session.id, sessionData, { ex: 86400 * 30 });
       console.log(`Session stored successfully with ID: ${session.id}`);
       return true;
     } catch (error) {
@@ -30,7 +31,8 @@ export const sessionStorage = {
       }
 
       console.log(`Session loaded successfully for ID: ${id}`);
-      return JSON.parse(String(sessionData)) as Session;
+      const sessionObj = JSON.parse(String(sessionData));
+      return new Session(sessionObj);
     } catch (error) {
       console.error("Session loading error:", error);
       return undefined;
