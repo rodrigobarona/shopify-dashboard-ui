@@ -7,13 +7,10 @@ export async function GET(request: NextRequest) {
     const shop = searchParams.get("shop");
 
     if (!shop) {
-      return NextResponse.json(
-        { error: "Missing shop parameter" },
-        { status: 400 }
-      );
+      return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Validate the shop domain
+    // Validate shop
     const sanitizedShop = shopify.utils.sanitizeShop(shop);
     if (!sanitizedShop) {
       return NextResponse.json(
@@ -22,22 +19,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build auth URL - use path only, not full URL
-    const authPath = "/api/auth/callback";
+    // Direct path without host (simpler approach)
+    const callbackPath = "/api/auth/callback";
 
-    // Begin OAuth process with proper parameters
+    // Use simpler parameters aligned with Shopify API expectations
     const authUrl = await shopify.auth.begin({
       shop: sanitizedShop,
-      callbackPath: authPath,
-      isOnline: false,
+      callbackPath,
+      isOnline: true,
       rawRequest: request,
     });
 
     return NextResponse.redirect(authUrl);
   } catch (error) {
-    console.error("Auth error:", error);
+    console.error("Auth error details:", error);
+
     return NextResponse.json(
-      { error: "Authentication process failed" },
+      {
+        error: "Authentication process failed",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }
