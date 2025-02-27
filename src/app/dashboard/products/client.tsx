@@ -4,85 +4,21 @@ import { useState, useEffect } from "react";
 import {
   type ApolloClient,
   ApolloProvider,
-  gql,
   type NormalizedCacheObject,
   useQuery,
 } from "@apollo/client";
 import { createApolloClient } from "@/lib/apollo";
 import { Session } from "@shopify/shopify-api";
-import {
-  Card,
-  Title,
-  Text,
-  Badge,
-  Grid,
-  TextInput,
-  Button,
-} from "@tremor/react";
+import { Card, Title, Text, Badge, TextInput, Button } from "@tremor/react";
 import { Search, Plus } from "lucide-react";
 import Image from "next/image";
-import type { SessionParams } from "@/types";
-
-// Define types
-interface ProductNode {
-  id: string;
-  title: string;
-  handle: string;
-  description?: string;
-  priceRangeV2: {
-    minVariantPrice: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  images: {
-    edges: Array<{
-      node: {
-        url: string;
-        altText: string | null;
-      };
-    }>;
-  };
-}
-
-// Products query - modified to get more products
-const PRODUCTS_QUERY = gql`
-  query GetProducts($first: Int!) {
-    products(first: $first) {
-      edges {
-        node {
-          id
-          title
-          handle
-          description
-          priceRangeV2 {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-        }
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-`;
+import type { SessionParams, ProductNode } from "@/types";
+import { PRODUCTS_LIST_QUERY } from "@/graphql";
 
 // Products List Component
 function ProductsList() {
   const [searchTerm, setSearchTerm] = useState("");
-  const { loading, error, data } = useQuery(PRODUCTS_QUERY, {
+  const { loading, error, data } = useQuery(PRODUCTS_LIST_QUERY, {
     variables: { first: 24 }, // Show more products on the dedicated page
   });
 
@@ -121,7 +57,15 @@ function ProductsList() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map(({ node }: { node: ProductNode }) => (
-            <Card key={node.id} className="flex flex-col h-full">
+            <Card
+              key={node.id}
+              className="flex flex-col h-full cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => {
+                window.location.href = `/dashboard/products/${encodeURIComponent(
+                  node.id
+                )}`;
+              }}
+            >
               {node.images.edges.length > 0 ? (
                 <Image
                   src={node.images.edges[0].node.url}
@@ -139,7 +83,7 @@ function ProductsList() {
                 <div className="flex justify-between items-start">
                   <Title className="text-lg truncate">{node.title}</Title>
                   <Badge color="indigo">
-                    {parseFloat(
+                    {Number.parseFloat(
                       node.priceRangeV2.minVariantPrice.amount
                     ).toFixed(2)}{" "}
                     {node.priceRangeV2.minVariantPrice.currencyCode}

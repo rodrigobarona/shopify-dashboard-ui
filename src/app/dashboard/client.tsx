@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import {
   type ApolloClient,
   ApolloProvider,
-  gql,
   type NormalizedCacheObject,
   useQuery,
 } from "@apollo/client";
@@ -28,92 +27,8 @@ import {
 } from "@tremor/react";
 import { ShoppingBag, ShoppingCart, Users, TrendingUp } from "lucide-react";
 import Image from "next/image";
-
-// Add this interface near the top of your file, under the imports
-interface ProductNode {
-  id: string;
-  title: string;
-  handle: string;
-  description?: string;
-  priceRangeV2: {
-    minVariantPrice: {
-      amount: string;
-      currencyCode: string;
-    };
-  };
-  images: {
-    edges: Array<{
-      node: {
-        url: string;
-        altText: string | null;
-      };
-    }>;
-  };
-}
-
-// Summary statistics query
-const STATS_QUERY = gql`
-  query GetShopStats {
-    shop {
-      name
-      myshopifyDomain
-    }
-    products(first: 1) {
-      edges {
-        cursor
-      }
-      pageInfo {
-        totalCount
-      }
-    }
-    orders(first: 1) {
-      edges {
-        cursor
-      }
-      pageInfo {
-        totalCount
-      }
-    }
-    customers(first: 1) {
-      edges {
-        cursor
-      }
-      pageInfo {
-        totalCount
-      }
-    }
-  }
-`;
-
-// Products query
-const PRODUCTS_QUERY = gql`
-  query GetProducts {
-    products(first: 10) {
-      edges {
-        node {
-          id
-          title
-          handle
-          description
-          priceRangeV2 {
-            minVariantPrice {
-              amount
-              currencyCode
-            }
-          }
-          images(first: 1) {
-            edges {
-              node {
-                url
-                altText
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`;
+import { STATS_QUERY, PRODUCTS_LIST_QUERY } from "@/graphql";
+import type { ProductNode } from "@/types";
 
 // Example sales data (replace with real data)
 const salesData = [
@@ -215,7 +130,7 @@ function StatsCard({
 
 // Products List Component
 function ProductsList() {
-  const { loading, error, data } = useQuery(PRODUCTS_QUERY);
+  const { loading, error, data } = useQuery(PRODUCTS_LIST_QUERY);
 
   if (loading) return <p>Loading products...</p>;
   if (error) return <p>Error loading products: {error.message}</p>;
